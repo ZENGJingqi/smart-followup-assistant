@@ -1,0 +1,21 @@
+﻿{% extends "base.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<section class="form-page">
+    <div class="section-title">
+        <h1>{{ page_title }}</h1>
+<p>{{ patient.name }} · {{ patient.patient_id }}</p>
+    </div>
+
+    <form method="post" class="form-card">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <div class="toolbar-actions">
+            <button class="button" type="submit">{{ submit_label }}</button>
+            <a class="button button-secondary" href="{% url 'patient_detail' patient.pk %}">返回详情</a>
+        </div>
+    </form>
+</section>
+{% endblock %}

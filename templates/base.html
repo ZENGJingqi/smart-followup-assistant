@@ -1,0 +1,183 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ app_name|default:"智能随访助手" }}{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body>
+    <header class="site-header">
+        <div class="wrap">
+            <a class="brand" href="{% if request.user.is_authenticated %}{% url 'patient_list' %}{% else %}{% url 'login' %}{% endif %}">
+                {{ app_name|default:"智能随访助手" }}
+            </a>
+            {% if request.user.is_authenticated %}
+                <div class="header-actions">
+                    <nav class="nav">
+                        <a href="{% url 'patient_list' %}">患者列表</a>
+                        <a href="{% url 'patient_create' %}">新建患者</a>
+                        {% if can_manage_accounts %}
+                            <a href="{% url 'account_list' %}">账号管理</a>
+                        {% endif %}
+                    </nav>
+                    <form method="post" action="{% url 'logout' %}" class="inline-form">
+                        {% csrf_token %}
+                        <button type="submit" class="button button-secondary button-small">退出</button>
+                    </form>
+                </div>
+            {% endif %}
+        </div>
+    </header>
+
+    <main class="wrap content">
+        {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                    <div class="message">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+        <div class="wrap footer-content">
+            <div class="footer-brand">
+                <strong>{{ app_name|default:"智能随访助手" }}</strong>
+                <span>{{ app_subtitle|default:"临床科研随访管理系统" }}</span>
+                {% if request.user.is_authenticated %}
+                    <div class="footer-user">
+                        <span>{{ request.user.first_name|default:request.user.username }} ｜ {{ current_user_role|default:"-" }}</span>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="footer-meta">
+                <span>{{ app_copyright }}</span>
+                <span>{{ app_notice }}</span>
+                {% if support_email %}
+                    <span>Support: <a href="mailto:{{ support_email }}">{{ support_email }}</a></span>
+                {% endif %}
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function formatDateDigits(value) {
+            const digits = value.replace(/\D/g, '').slice(0, 8);
+            const year = digits.slice(0, 4);
+            const month = digits.slice(4, 6);
+            const day = digits.slice(6, 8);
+            return [year, month, day].filter(Boolean).join('-');
+        }
+
+        function formatDateObject(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function parseDateValue(value) {
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                return null;
+            }
+            const [year, month, day] = value.split('-').map(Number);
+            const parsed = new Date(year, month - 1, day);
+            if (
+                parsed.getFullYear() !== year ||
+                parsed.getMonth() !== month - 1 ||
+                parsed.getDate() !== day
+            ) {
+                return null;
+            }
+            return parsed;
+        }
+
+        function isValidDateValue(value) {
+            return !value || Boolean(parseDateValue(value));
+        }
+
+        window.followupDateUtils = {
+            formatDateObject,
+            parseDateValue,
+        };
+
+        document.querySelectorAll('[data-date-input="true"]').forEach((input) => {
+            if (input.dataset.dateEnhanced === 'true') {
+                return;
+            }
+            input.dataset.dateEnhanced = 'true';
+
+            const shell = document.createElement('div');
+            shell.className = 'date-input-shell';
+            input.parentNode.insertBefore(shell, input);
+            shell.appendChild(input);
+
+            const picker = document.createElement('input');
+            picker.type = 'date';
+            picker.className = 'date-picker-native';
+            picker.tabIndex = -1;
+            picker.setAttribute('aria-hidden', 'true');
+            shell.appendChild(picker);
+
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'date-picker-button';
+            button.textContent = '日历';
+            button.setAttribute('aria-label', '打开日历');
+            shell.appendChild(button);
+
+            function syncPickerFromInput() {
+                picker.value = isValidDateValue(input.value) ? input.value : '';
+            }
+
+            function syncInputFromPicker() {
+                if (!picker.value) {
+                    return;
+                }
+                input.value = picker.value;
+                input.setCustomValidity('');
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+                input.dispatchEvent(new Event('blur', { bubbles: true }));
+            }
+
+            if (input.value) {
+                input.value = formatDateDigits(input.value);
+            }
+            syncPickerFromInput();
+
+            input.addEventListener('input', () => {
+                const nextValue = formatDateDigits(input.value);
+                input.value = nextValue;
+                input.setCustomValidity('');
+                syncPickerFromInput();
+            });
+
+            input.addEventListener('blur', () => {
+                if (!isValidDateValue(input.value)) {
+                    input.setCustomValidity('请输入正确的 YYYY-MM-DD 日期');
+                    input.reportValidity();
+                    return;
+                }
+                input.setCustomValidity('');
+                syncPickerFromInput();
+            });
+
+            button.addEventListener('click', () => {
+                syncPickerFromInput();
+                if (typeof picker.showPicker === 'function') {
+                    picker.showPicker();
+                    return;
+                }
+                picker.focus();
+                picker.click();
+            });
+
+            picker.addEventListener('change', syncInputFromPicker);
+            picker.addEventListener('input', syncInputFromPicker);
+        });
+    </script>
+</body>
+</html>

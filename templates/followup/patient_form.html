@@ -1,0 +1,34 @@
+﻿{% extends "base.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<section class="form-page">
+    <div class="section-title">
+        <h1>{{ page_title }}</h1>
+    </div>
+
+    <form method="post" class="form-card">
+        {% csrf_token %}
+        {% if preview_patient_id %}
+            <p class="inline-note">患者编号将自动生成，当前预计为：{{ preview_patient_id }}</p>
+        {% endif %}
+        <h2>患者信息</h2>
+        {{ patient_form.as_p }}
+
+        {% if treatment_form %}
+            <h2>首次诊疗信息</h2>
+            {{ treatment_form.as_p }}
+        {% endif %}
+
+        <div class="toolbar-actions">
+            <button class="button" type="submit">{{ submit_label }}</button>
+            {% if patient %}
+                <a class="button button-secondary" href="{% url 'patient_detail' patient.pk %}">返回详情</a>
+            {% else %}
+                <a class="button button-secondary" href="{% url 'patient_list' %}">返回列表</a>
+            {% endif %}
+        </div>
+    </form>
+</section>
+{% endblock %}

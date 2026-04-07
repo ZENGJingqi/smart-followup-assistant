@@ -1,0 +1,142 @@
+﻿{% extends "base.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<section class="form-page">
+    <div class="section-title">
+        <h1>{{ page_title }}</h1>
+<p>{{ treatment.patient.name }} · {{ treatment.treatment_name }}</p>
+    </div>
+
+    <form method="post" class="form-card">
+        {% csrf_token %}
+        {% if scheduled_next_followup_date %}
+            <p class="inline-note">当前计划的下次随访日期是 {{ scheduled_next_followup_date }}。本次随访默认录入今天，你也可以改成实际随访日期。</p>
+        {% else %}
+            <p class="inline-note">下次建议随访日期默认按本次随访后 {{ followup_interval_days }} 天生成。你可以直接改日期，也可以在右侧填写天数自动推算。</p>
+        {% endif %}
+
+        {% if form.non_field_errors %}
+            <div class="message">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="form-grid form-grid-two">
+            <div class="field-box">
+                <label for="{{ form.visit_number.id_for_label }}">{{ form.visit_number.label }}</label>
+                {{ form.visit_number }}
+                {{ form.visit_number.errors }}
+            </div>
+            <div class="field-box">
+                <label for="{{ form.followup_date.id_for_label }}">{{ form.followup_date.label }}</label>
+                {{ form.followup_date }}
+                {{ form.followup_date.errors }}
+            </div>
+        </div>
+
+        <div class="form-grid form-grid-two">
+            <div class="field-box">
+                <label for="{{ form.next_followup_in_days.id_for_label }}">{{ form.next_followup_in_days.label }}</label>
+                <div class="input-with-suffix">
+                    {{ form.next_followup_in_days }}
+                    <span>天</span>
+                </div>
+                {% if form.next_followup_in_days.help_text %}
+                    <small class="helptext">{{ form.next_followup_in_days.help_text }}</small>
+                {% endif %}
+                {{ form.next_followup_in_days.errors }}
+            </div>
+            <div class="field-box">
+                <label for="{{ form.planned_next_followup_date.id_for_label }}">{{ form.planned_next_followup_date.label }}</label>
+                {{ form.planned_next_followup_date }}
+                {% if form.planned_next_followup_date.help_text %}
+                    <small class="helptext">{{ form.planned_next_followup_date.help_text }}</small>
+                {% endif %}
+                {{ form.planned_next_followup_date.errors }}
+            </div>
+        </div>
+
+        <div class="field-box">
+            <label for="{{ form.symptoms.id_for_label }}">{{ form.symptoms.label }}</label>
+            {{ form.symptoms }}
+            {{ form.symptoms.errors }}
+        </div>
+
+        <div class="field-box">
+            <label for="{{ form.medication_adherence.id_for_label }}">{{ form.medication_adherence.label }}</label>
+            {{ form.medication_adherence }}
+            {{ form.medication_adherence.errors }}
+        </div>
+
+        <div class="field-box">
+            <label for="{{ form.adverse_events.id_for_label }}">{{ form.adverse_events.label }}</label>
+            {{ form.adverse_events }}
+            {{ form.adverse_events.errors }}
+        </div>
+
+        <div class="field-box">
+            <label for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label>
+            {{ form.notes }}
+            {{ form.notes.errors }}
+        </div>
+
+        <div class="toolbar-actions">
+            <button class="button" type="submit">{{ submit_label }}</button>
+            <a class="button button-secondary" href="{% url 'patient_detail' treatment.patient.pk %}">返回详情</a>
+        </div>
+    </form>
+</section>
+<script>
+    const currentFollowupDate = document.getElementById('id_followup_date');
+    const nextFollowupDate = document.getElementById('id_planned_next_followup_date');
+    const nextFollowupInDays = document.getElementById('id_next_followup_in_days');
+    const defaultIntervalDays = {{ followup_interval_days|default:14 }};
+
+    function parseDate(value) {
+        return window.followupDateUtils ? window.followupDateUtils.parseDateValue(value) : null;
+    }
+
+    function formatDate(date) {
+        return window.followupDateUtils ? window.followupDateUtils.formatDateObject(date) : '';
+    }
+
+    function syncPlannedDateFromDays() {
+        if (!currentFollowupDate || !nextFollowupDate || !nextFollowupInDays) {
+            return;
+        }
+        const baseDate = parseDate(currentFollowupDate.value);
+        const days = parseInt(nextFollowupInDays.value || '', 10);
+        if (!baseDate || Number.isNaN(days)) {
+            return;
+        }
+        const target = new Date(baseDate);
+        target.setDate(target.getDate() + days);
+        nextFollowupDate.value = formatDate(target);
+        nextFollowupDate.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function syncDaysFromPlannedDate() {
+        if (!currentFollowupDate || !nextFollowupDate || !nextFollowupInDays) {
+            return;
+        }
+        const baseDate = parseDate(currentFollowupDate.value);
+        const plannedDate = parseDate(nextFollowupDate.value);
+        if (!baseDate || !plannedDate) {
+            return;
+        }
+        const diff = Math.round((plannedDate - baseDate) / 86400000);
+        nextFollowupInDays.value = diff >= 0 ? diff : 0;
+    }
+
+    if (currentFollowupDate && nextFollowupDate && nextFollowupInDays) {
+        if (!nextFollowupInDays.value) {
+            nextFollowupInDays.value = defaultIntervalDays;
+        }
+        currentFollowupDate.addEventListener('change', syncPlannedDateFromDays);
+        currentFollowupDate.addEventListener('blur', syncPlannedDateFromDays);
+        nextFollowupInDays.addEventListener('input', syncPlannedDateFromDays);
+        nextFollowupDate.addEventListener('change', syncDaysFromPlannedDate);
+        nextFollowupDate.addEventListener('blur', syncDaysFromPlannedDate);
+    }
+</script>
+{% endblock %}

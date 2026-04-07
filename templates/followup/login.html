@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}登录{% endblock %}
+
+{% block content %}
+<section class="login-shell">
+    <div class="login-card login-card-simple">
+        <div class="login-copy login-copy-simple">
+            <h1>{{ app_name }}</h1>
+            <p>{{ app_subtitle }}</p>
+        </div>
+
+        <form method="post" class="form-card login-form login-form-simple">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ next_url }}">
+            {% if form.non_field_errors %}
+                <div class="message">{{ form.non_field_errors }}</div>
+            {% endif %}
+            <div class="field-box">
+                <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+                {{ form.username }}
+            </div>
+            <div class="field-box">
+                <label for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+                {{ form.password }}
+            </div>
+            <button class="button login-submit" type="submit">登录</button>
+            <div class="login-support">
+                {% if support_email %}
+                    <p class="login-note">账号或系统问题请联系 {{ support_email }}</p>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</section>
+{% endblock %}
