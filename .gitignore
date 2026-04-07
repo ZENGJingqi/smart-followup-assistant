@@ -1,0 +1,14 @@
+.env.local
+.env.server
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.sqlite3
+*.sqlite3-journal
+data/
+runtime/
+staticfiles/
+release/
+docs/
+scripts/generate_release_docs.py
